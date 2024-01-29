@@ -8,7 +8,7 @@ const GameScoresPanel = ({ scores, onClose }) => {
     <div className="scores-panel">
       <div className="scores-header">
         <h2>Game Scores</h2>
-        <button onClick={onClose} className="close-button">
+        <button onClick={onClose} className="play-button">
           Close
         </button>
       </div>
@@ -22,9 +22,9 @@ const GameScoresPanel = ({ scores, onClose }) => {
               <div>
                 <strong>Player 2 Total Jail Years:</strong> {score.totalJailYearsPlayer2}
               </div>
-              <div>
+              {/* <div>
                 <strong>Winner:</strong> {score.winner}
-              </div>
+              </div> */}
               <div>
                 <strong>Date and Time</strong> {isValid(new Date(score.timestamp))
                   ? format(new Date(score.timestamp), 'MM/dd/yyyy HH:mm:ss')
