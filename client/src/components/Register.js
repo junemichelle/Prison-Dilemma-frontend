@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
-const Register = ({ onRegister, isAuthenticated }) => {
+const Register = () => {
+  const { isAuthenticated, login } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [redirecting, setRedirecting] = useState(false);
+  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
-    e.preventDefault(); // Prevent the default form submission behavior
-  
+    e.preventDefault();
+
     try {
       const response = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
@@ -18,15 +21,16 @@ const Register = ({ onRegister, isAuthenticated }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, email, password }),
+        credentials: 'include',
       });
-  
-      const data = await response.json();
-  
+
       if (response.ok) {
-        localStorage.setItem('authToken', '');  // Clear any existing token
-        onRegister();
+        // Assuming registration is successful
+        const data = await response.json();
+        setMessage(data.message);
         setRedirecting(true);
       } else {
+        const data = await response.json();
         setMessage(data.message);
       }
     } catch (error) {
@@ -36,18 +40,14 @@ const Register = ({ onRegister, isAuthenticated }) => {
   };
 
   useEffect(() => {
-    // Redirect to home page if isAuthenticated and redirecting is true
     if (isAuthenticated && redirecting) {
-      console.log('Redirecting to home page');
-      // Trigger navigation to the home page
-      setRedirecting(false);  // Reset the redirecting flag
-      return <Navigate to="/" />;
+      setRedirecting(false);
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, redirecting]);
 
-  // Redirect to home page if isAuthenticated
   if (isAuthenticated) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   return (

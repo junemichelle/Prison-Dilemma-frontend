@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GameScoresPanel from './GameScoresPanel.js';
+import { useAuth } from './AuthContext.js';
+import '../App.css'
 
 const ResultDisplay = ({ totalJailYearsPlayer1, totalJailYearsPlayer2, winner, onPlayAgain, onLogout }) => {
   return (
     <div className="result-container">
-      <h2>{`Player 1 Total Jail Years: ${totalJailYearsPlayer1}`}</h2>
-      <h2>{`Player 2 Total Jail Years: ${totalJailYearsPlayer2}`}</h2>
-      <h2>{`Winner: ${winner}`}</h2>
-      <button onClick={onPlayAgain} className="play-again-button">
+      <h2>{`PC Total Jail Years: ${totalJailYearsPlayer1}`}</h2>
+      <h2>{`YOU Total Jail Years: ${totalJailYearsPlayer2}`}</h2>
+      {/* <h2>{`Winner: ${winner}`}</h2> */}
+      <button onClick={onPlayAgain} className="play-button">
         Play Again
       </button>
     </div>
@@ -25,13 +27,52 @@ const PrisonDilemmaGame = ({ onLogout }) => {
   const [gameOver, setGameOver] = useState(false);
   const [showScoresPanel, setShowScoresPanel] = useState(false);
   const [gameScores, setGameScores] = useState([]);
-
+  const [authToken, setAuthToken] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const scores = JSON.parse(localStorage.getItem('gameScores')) || [];
-    setGameScores(scores);
-  }, []);
+  // const makeDecision = async (decision) => {
+  //   if (gameOver) return;
+
+  //   try {
+  //     const response = await fetch('http://localhost:5000/api/play-round', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ userMove: decision }),
+  //     });
+
+  //     if (response.ok) {
+  //       const data = await response.json();
+
+  //       // Update state based on the API response
+  //       setComputerMove(data.computerMove);
+  //       setResult(data.result);
+  //       setTotalJailYearsPlayer1(data.scores.user);
+  //       setTotalJailYearsPlayer2(data.scores.computer);
+  //       setGameOver(data.gameOver);
+  //     } else {
+  //       // Handle error response from the API
+  //       console.error('Error playing round:', response.statusText);
+  //     }
+  //   } catch (error) {
+  //     // Handle network or other errors
+  //     console.error('Error playing round:', error);
+  //   }
+
+  //   setRoundCount(roundCount + 1);
+
+  //   if (roundCount >= 3) {
+  //     setGameOver(true);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   const scores = JSON.parse(localStorage.getItem('gameScores')) || [];
+  //   setGameScores(scores);
+  // }, []);
 
   const makeDecision = (decision) => {
     if (gameOver) return;
@@ -45,13 +86,12 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     setRoundCount(roundCount + 1);
 
     if (roundCount >= 3) {
-      determineWinner();
+      // determineWinner();
       setGameOver(true);
  
       const newScore = {
         totalJailYearsPlayer1,
-        totalJailYearsPlayer2,
-        winner,
+        totalJailYearsPlayer2
       };
       const scores = [...gameScores, newScore];
       localStorage.setItem('gameScores', JSON.stringify(scores));
@@ -82,22 +122,7 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     }
   };
 
-  const determineWinner = () => {
-    const jailYearsPlayer1 = parseInt(totalJailYearsPlayer1, 10);
-    const jailYearsPlayer2 = parseInt(totalJailYearsPlayer2, 10);
-  
-    if (isNaN(jailYearsPlayer1) || isNaN(jailYearsPlayer2)) {
-      setWinner("Invalid results");
-    } else {
-      if (jailYearsPlayer1 < jailYearsPlayer2) {
-        setWinner('Player 1');
-      } else if (jailYearsPlayer1 > jailYearsPlayer2) {
-        setWinner('Player 2');
-      } else {
-        setWinner("It's a tie!");
-      }
-    }
-  };
+
 
   const resetGame = () => {
     const newScore = {
@@ -119,16 +144,31 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     localStorage.setItem('gameScores', JSON.stringify([...gameScores, newScore]));
   };
 
-  const handleLogout = () => {
-    onLogout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Your logout logic, e.g., calling a backend endpoint to invalidate the token
+      const response = await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Include credentials (cookies) in the request
+      });
+
+      if (response.ok) {
+        console.log('Logout successful');
+        logout();
+      } else {
+        const data = await response.json();
+        console.log('Logout failed. Message:', data.message);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   return (
     <div className="game-container">
       <header>
         <h1>Prison Dilemma Game</h1>
-        <button onClick={handleLogout} className="logout-button">
+        <button onClick={handleLogout} className="play-button">
           Logout
         </button>
       </header>
@@ -144,16 +184,16 @@ const PrisonDilemmaGame = ({ onLogout }) => {
         <>
           <h2>{`Round ${roundCount + 1}: Make your decision`}</h2>
           <div className="button-container">
-            <button onClick={() => makeDecision('cooperate')} disabled={gameOver} className="decision-button">
+            <button onClick={() => makeDecision('cooperate')} disabled={gameOver} className="play-button">
               Cooperate
             </button>
-            <button onClick={() => makeDecision('betray')} disabled={gameOver} className="decision-button">
+            <button onClick={() => makeDecision('betray')} disabled={gameOver} className="play-button">
               Betray
             </button>
           </div>
         </>
       )}
-      <button onClick={() => setShowScoresPanel(true)} className="show-scores-button">
+      <button onClick={() => setShowScoresPanel(true)} className="play-button">
         Show Scores
       </button>
       {showScoresPanel && <GameScoresPanel scores={gameScores} onClose={() => setShowScoresPanel(false)} />}
