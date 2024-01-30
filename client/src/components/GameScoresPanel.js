@@ -17,10 +17,10 @@ const GameScoresPanel = ({ scores, onClose }) => {
           scores.map((score, index) => (
             <div key={index} className="score-item">
               <div>
-                <strong>Player 1 Total Jail Years:</strong> {score.totalJailYearsPlayer1}
+                <strong>PC Total Jail Years:</strong> {score.totalJailYearsPlayer1}
               </div>
               <div>
-                <strong>Player 2 Total Jail Years:</strong> {score.totalJailYearsPlayer2}
+                <strong>Your Total Jail Years:</strong> {score.totalJailYearsPlayer2}
               </div>
               {/* <div>
                 <strong>Winner:</strong> {score.winner}

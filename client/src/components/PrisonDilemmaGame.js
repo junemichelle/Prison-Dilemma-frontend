@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GameScoresPanel from './GameScoresPanel.js';
 import { useAuth } from './AuthContext.js';
-import '../App.css'
+import '../App.css';
+import { format, isValid } from 'date-fns';
 
 const ResultDisplay = ({ totalJailYearsPlayer1, totalJailYearsPlayer2, winner, onPlayAgain, onLogout }) => {
   return (
@@ -32,52 +33,10 @@ const PrisonDilemmaGame = ({ onLogout }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  // const makeDecision = async (decision) => {
-  //   if (gameOver) return;
-
-  //   try {
-  //     const response = await fetch('http://localhost:5000/api/play-round', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ userMove: decision }),
-  //     });
-
-  //     if (response.ok) {
-  //       const data = await response.json();
-
-  //       // Update state based on the API response
-  //       setComputerMove(data.computerMove);
-  //       setResult(data.result);
-  //       setTotalJailYearsPlayer1(data.scores.user);
-  //       setTotalJailYearsPlayer2(data.scores.computer);
-  //       setGameOver(data.gameOver);
-  //     } else {
-  //       // Handle error response from the API
-  //       console.error('Error playing round:', response.statusText);
-  //     }
-  //   } catch (error) {
-  //     // Handle network or other errors
-  //     console.error('Error playing round:', error);
-  //   }
-
-  //   setRoundCount(roundCount + 1);
-
-  //   if (roundCount >= 3) {
-  //     setGameOver(true);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   const scores = JSON.parse(localStorage.getItem('gameScores')) || [];
-  //   setGameScores(scores);
-  // }, []);
-
   const makeDecision = (decision) => {
     if (gameOver) return;
 
-    const player1Decision = Math.random() < 0.5 ? 'cooperate' : 'betray';
+    const player1Decision = Math.random() < 0.5 ? 'cooperate' : 'default';
     setPlayer1Choices([...player1Choices, player1Decision]);
     setPlayer2Choices([...player2Choices, decision]);
 
@@ -86,18 +45,19 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     setRoundCount(roundCount + 1);
 
     if (roundCount >= 3) {
-      // determineWinner();
       setGameOver(true);
- 
+
       const newScore = {
         totalJailYearsPlayer1,
-        totalJailYearsPlayer2
+        totalJailYearsPlayer2,
+        winner,
+        timestamp: Date.now(),
       };
-      const scores = [...gameScores, newScore];
-      localStorage.setItem('gameScores', JSON.stringify(scores));
+
+      setGameScores([...gameScores, newScore]);
+      localStorage.setItem('gameScores', JSON.stringify([...gameScores, newScore]));
     }
   };
-
 
   const calculatePoints = (p1, p2) => {
     switch (true) {
@@ -105,15 +65,15 @@ const PrisonDilemmaGame = ({ onLogout }) => {
         setTotalJailYearsPlayer1(totalJailYearsPlayer1 + 2);
         setTotalJailYearsPlayer2(totalJailYearsPlayer2 + 2);
         break;
-      case p1 === 'betray' && p2 === 'cooperate':
+      case p1 === 'default' && p2 === 'cooperate':
         setTotalJailYearsPlayer1(totalJailYearsPlayer1 + 0);
         setTotalJailYearsPlayer2(totalJailYearsPlayer2 + 5);
         break;
-      case p1 === 'cooperate' && p2 === 'betray':
+      case p1 === 'cooperate' && p2 === 'default':
         setTotalJailYearsPlayer1(totalJailYearsPlayer1 + 5);
         setTotalJailYearsPlayer2(totalJailYearsPlayer2 + 0);
         break;
-      case p1 === 'betray' && p2 === 'betray':
+      case p1 === 'default' && p2 === 'default':
         setTotalJailYearsPlayer1(totalJailYearsPlayer1 + 3);
         setTotalJailYearsPlayer2(totalJailYearsPlayer2 + 3);
         break;
@@ -122,14 +82,12 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     }
   };
 
-
-
   const resetGame = () => {
     const newScore = {
       totalJailYearsPlayer1,
       totalJailYearsPlayer2,
       winner,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     setGameScores([...gameScores, newScore]);
@@ -144,12 +102,33 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     localStorage.setItem('gameScores', JSON.stringify([...gameScores, newScore]));
   };
 
+  const deleteGameScore = async (timestamp) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/scores/${timestamp}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (response.ok) {
+        console.log('Score deleted successfully');
+        // Implement logic to update the UI or state after successful deletion
+      } else {
+        const data = await response.json();
+        console.log('Score deletion failed. Message:', data.message);
+      }
+    } catch (error) {
+      console.error('Error during score deletion:', error);
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      // Your logout logic, e.g., calling a backend endpoint to invalidate the token
       const response = await fetch('http://localhost:5000/api/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Include credentials (cookies) in the request
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -162,6 +141,10 @@ const PrisonDilemmaGame = ({ onLogout }) => {
     } catch (error) {
       console.error('Error during logout:', error);
     }
+  };
+
+  const toggleScoresPanel = () => {
+    setShowScoresPanel(!showScoresPanel);
   };
 
   return (
@@ -184,19 +167,25 @@ const PrisonDilemmaGame = ({ onLogout }) => {
         <>
           <h2>{`Round ${roundCount + 1}: Make your decision`}</h2>
           <div className="button-container">
+            <div className="player-choice-container">
+              <p className='p'>PC Decision:</p>
+              {player1Choices.map((choice, index) => (
+                <span key={index} className="choice">{choice}</span>
+              ))}
+            </div>
             <button onClick={() => makeDecision('cooperate')} disabled={gameOver} className="play-button">
               Cooperate
             </button>
-            <button onClick={() => makeDecision('betray')} disabled={gameOver} className="play-button">
-              Betray
+            <button onClick={() => makeDecision('default')} disabled={gameOver} className="play-button">
+              Default
             </button>
           </div>
         </>
       )}
-      <button onClick={() => setShowScoresPanel(true)} className="play-button">
+      <button onClick={toggleScoresPanel} className="play-button">
         Show Scores
       </button>
-      {showScoresPanel && <GameScoresPanel scores={gameScores} onClose={() => setShowScoresPanel(false)} />}
+      {showScoresPanel && <GameScoresPanel scores={gameScores} onDelete={deleteGameScore} onClose={toggleScoresPanel} />}
     </div>
   );
 };

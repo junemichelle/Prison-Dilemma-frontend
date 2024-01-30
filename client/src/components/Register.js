@@ -12,8 +12,8 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
-    e.preventDefault();
-
+    e.preventDefault();  // Add this line to prevent the default form submission behavior
+  
     try {
       const response = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
@@ -23,12 +23,12 @@ const Register = () => {
         body: JSON.stringify({ username, email, password }),
         credentials: 'include',
       });
-
+  
       if (response.ok) {
-        // Assuming registration is successful
         const data = await response.json();
         setMessage(data.message);
-        setRedirecting(true);
+
+        window.location.href = '/';
       } else {
         const data = await response.json();
         setMessage(data.message);
@@ -38,17 +38,20 @@ const Register = () => {
       setMessage('An error occurred during registration.');
     }
   };
+  // useEffect(() => {
+  //   const redirectUser = async () => {
+  //     if (isAuthenticated && redirecting) {
+  //       setRedirecting(false);
+  //       await navigate('/', { replace: true });
+  //     }
+  //   };
+  
+  //   redirectUser();
+  // }, [isAuthenticated, redirecting, navigate]);
 
-  useEffect(() => {
-    if (isAuthenticated && redirecting) {
-      setRedirecting(false);
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, redirecting]);
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
+  // if (isAuthenticated) {
+  //   return <Navigate to="/" replace />;
+  // }
 
   return (
     <div className='setup'>
